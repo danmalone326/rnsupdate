@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Read conf file from same location as script
+_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+. $_SCRIPT_DIR/rnsupdate.conf
+
+# Assumes these 2 come from certbot
+#echo $CERTBOT_DOMAIN
+#echo $CERTBOT_VALIDATION
+
+DDNS_DOMAIN=$(echo $CERTBOT_DOMAIN | sed -e "$DDNS_REGEX")
+#echo $DDNS_DOMAIN
+
+TXT_RECORD="_acme-challenge.${DDNS_DOMAIN}"
+#echo $TXT_DOMAIN
+
+$NSUPDATE_COMMAND <<EOF
+server ${DNS_SERVER}
+zone ${DDNS_ZONE}
+del ${TXT_RECORD}
+add ${TXT_RECORD} 0 TXT ${CERTBOT_VALIDATION}
+send
+quit
+EOF
+
+sleep $DDNS_DELAY

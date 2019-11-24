@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Read conf file from same location as script
+_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+. $_SCRIPT_DIR/rnsupdate.conf
+
+echo $NSUPDATE_COMMAND
+echo $DNS_SERVER
+echo $DDNS_ZONE
+echo $DDNS_REGEX
+
+echo $1 | sed -e "$DDNS_REGEX"
+
+$NSUPDATE_COMMAND

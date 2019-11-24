@@ -1,0 +1,29 @@
+#
+# Config file for remote nsupdate commands
+#
+#
+# This is the command that runs nsupdate on the remote machine
+#
+#NSUPDATE_COMMAND="/usr/bin/ssh -q -tt -i ~/.ssh/nsupdate marty@doc.outatime.com"
+NSUPDATE_COMMAND="/usr/bin/ssh -q -tt nsupdate"
+
+#
+# The DNS server where we are sending the dns updates
+# This is the parameter to the 'server' setting
+#
+DNS_SERVER="ns1.outatime.com"
+
+# 
+# This is the zone we are able to update 
+#
+DDNS_ZONE="ddns.outatime.com"
+
+#
+# regex to map the certbot provided DNS name to the DDNS name
+# 
+DDNS_REGEX="s/outatime.com$/${DDNS_ZONE}/"
+
+#
+# Delay in seconds to wait for zone transfer
+#
+DDNS_DELAY=5
