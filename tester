@@ -30,8 +30,7 @@ _getMyDefaultInterface(){
 
 _getMyDefaultIP(){
     local interface=$(_getMyDefaultInterface)    
-    local command="/sbin/ifconfig ${interface} | /usr/bin/grep 'inet ' | /usr/bin/awk '{print \$2}'"
-#     local command="/sbin/ifconfig ${interface} | /usr/bin/grep 'inet '"
+    local command="ifconfig ${interface} | grep 'inet ' | awk '{print \$2}'"
     debugEcho $command
     local ip=$(eval "$command")
     debugEcho $ip
