@@ -4,6 +4,41 @@
 _SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 . $_SCRIPT_DIR/rnsupdate.conf
 
+debug=true
+debugEcho () {
+  [[ "$debug" ]] && builtin echo $@ >&2
+}
+
+_getMyDefaultInterface(){
+    local unameOut="$(uname -s)"
+    case "${unameOut}" in
+        Linux*)
+            machine=Linux
+            interface=$(ip -4 route | grep default | awk '{print $5}')
+            ;;
+        Darwin*)    
+            machine=Mac
+            interface=$(netstat -nr -f inet | grep default | grep -oE '[^ ]+\s*$')
+            ;;
+        CYGWIN*)    machine=Cygwin;;
+        MINGW*)     machine=MinGw;;
+        *)          machine="UNKNOWN:${unameOut}"
+    esac
+    echo ${interface}
+}
+
+
+_getMyDefaultIP(){
+    local interface=$(_getMyDefaultInterface)    
+    local command="/sbin/ifconfig ${interface} | /usr/bin/grep 'inet ' | /usr/bin/awk '{print \$2}'"
+#     local command="/sbin/ifconfig ${interface} | /usr/bin/grep 'inet '"
+    debugEcho $command
+    local ip=$(eval "$command")
+    debugEcho $ip
+    echo $ip
+}
+
+
 echo $NSUPDATE_COMMAND
 echo $DNS_SERVER
 echo $DDNS_ZONE
@@ -11,4 +46,6 @@ echo $DDNS_REGEX
 
 echo $1 | sed -e "$DDNS_REGEX"
 
-$NSUPDATE_COMMAND
+echo $(_getMyDefaultIP)
+
+# $NSUPDATE_COMMAND
