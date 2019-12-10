@@ -10,10 +10,14 @@ debugEcho () {
 }
 
 _usage(){
-  echo "Usage: $(basename $0) [--hostname home.example.com] [--ipAddress 192.168.1.1] [--forceUpdate]"
+  echo "Usage: $(basename $0) [--hostname home.example.com] [--ipAddress 192.168.1.1] [--forceUpdate] [--dry-run]"
+  echo "    IP address can be replaced with 'local' or 'public' (default)"
+  echo "     to state what method should be used to determine the IP address."
+  echo "     e.g. $(basename $0) --ipAddress local "
 }
 
 _setArgs(){
+  getIPMethod="public"
   while [ "$1" != "" ]; do
     case $1 in
       "-h" | "--hostname")
@@ -25,10 +29,23 @@ _setArgs(){
         debugEcho $1 $2
         shift
         ipAddress=$1
+        if [ "$ipAddress" == "local" ]
+        then
+            getIPMethod="local"
+            ipAddress=""
+        elif [ "$ipAddress" == "public" ]
+        then
+            getIPMethod="public"
+            ipAddress=""
+        fi
         ;;
       "-f" | "--forceUpdate")
         debugEcho $1
         forceUpdate=true
+        ;;
+      "-n" | "--dry-run")
+        debugEcho $1
+        dryrun=true
         ;;
       "--help")
         debugEcho $1
@@ -82,6 +99,36 @@ function valid_hostname()
     return $stat
 }
 
+# Find the interface used for the default route out of this machine.
+# Command is different on OSX vs Linux vs other OSes, so need to handle that here
+_getMyDefaultInterface(){
+    local unameOut="$(uname -s)"
+    case "${unameOut}" in
+        Linux*)
+            machine=Linux
+            interface=$(ip -4 route | grep default | awk '{print $5}')
+            ;;
+        Darwin*)
+            machine=Mac
+            interface=$(netstat -nr -f inet | grep default | grep -oE '[^ ]+\s*$')
+            ;;
+#         CYGWIN*)    machine=Cygwin;;
+#         MINGW*)     machine=MinGw;;
+        *)          machine="UNKNOWN:${unameOut}"
+    esac
+    echo ${interface}
+}
+
+# Find the local IP address on the default interface.
+# This is more likely a non-public IP address
+_getMyDefaultIP(){
+    local interface=$(_getMyDefaultInterface)
+    local command="ifconfig ${interface} | grep 'inet ' | awk '{print \$2}'"
+    debugEcho $command
+    local ip=$(eval "$command")
+    debugEcho $ip
+    echo $ip
+}
 
 
 ipcheckURL='https://api.ipify.org'
@@ -128,7 +175,17 @@ _setArgs $*
 
 # if not set on command line, get using the default methods
 [ -z "$hostname" ] && hostname=$(_getMyHostname)
-[ -z "$ipAddress" ] && ipAddress=$(_getMyPublicIP)
+
+if [ -z "$ipAddress" ]
+then
+    if [ "$getIPMethod" == "local" ]
+    then
+        ipAddress=$(_getMyDefaultIP)
+    elif [ "$getIPMethod" == "public" ]
+    then
+        ipAddress=$(_getMyPublicIP)
+    fi
+fi
 
 # get the current value set in DNS
 currentDNS=$(_getCurrentDNS $hostname)
@@ -157,5 +214,10 @@ if ( ! [ -z "$forceUpdate" ] ) || \
     [ -z "$currentDNS" ] || \
     [ "$currentDNS" != "$ipAddress" ]
 then
-  _updateDNS $hostname $ipAddress
+    if [ -z $dryrun ]
+    then
+        _updateDNS $hostname $ipAddress
+    else
+        echo _updateDNS $hostname $ipAddress
+    fi
 fi
